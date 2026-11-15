@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banker's Algorithm Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="Bankers_Simulator.css">
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<section id="landing">
+  <div class="hero">
+    <div class="lc">
+      <span class="badge">Operating Systems &middot; Deadlock Avoidance</span>
+      <h1>Banker's Algorithm <em>Simulator</em></h1>
+      <p class="lead">Learn how an operating system decides whether a resource request is safe, then try it yourself and watch every step animate.</p>
+      <div class="row">
+        <button class="big" onclick="launch()">Start learning &rarr;</button>
+        <button class="link" onclick="launch(true)">Jump to simulator</button>
+      </div>
+      <div class="chips"><button class="chip" onclick="chipGo(1)">1 &middot; Learn the idea</button><button class="chip" onclick="chipGo(2)">2 &middot; Enter a system</button><button class="chip" onclick="chipGo(3)">3 &middot; Watch it run</button></div>
+    </div>
+    <div class="term"><div class="tb"><i></i><i></i><i></i> banker@os:~</div><pre id="term"></pre></div>
+  </div>
+  <div class="cap" id="cap"></div>
+</section>
+<div id="site" hidden>
+<header>
+  <h1>Banker's Algorithm Simulator</h1>
+  <p>Deadlock avoidance &mdash; learn the idea with a short interactive tutorial, then enter a system state and watch the safety algorithm find (or fail to find) a safe sequence.</p>
+  <button class="link" onclick="goHome()">&larr; Back to home</button>
+</header>
+<main>
+  <section class="panel" id="intro">
+    <h2>First, learn how it works</h2>
+    <div class="dots" id="dots"></div>
+    <div id="slide"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="ghost2" onclick="tgo(-1)">Back</button>
+      <button id="nextT" onclick="tgo(1)">Next</button>
+      <button class="link" onclick="unlock()">Skip to simulator</button>
+    </div>
+  </section>
+  <div id="app" hidden>
+  <section class="panel" id="config">
+    <h2>1. Configure the system</h2>
+    <div class="row">
+      <label>Processes <input type="number" id="n" min="1" max="10" value="5"></label>
+      <label>Resource types <input type="number" id="m" min="1" max="6" value="3"></label>
+      <button onclick="gen()">Generate tables</button>
+      <label>Example
+        <select id="ex" onchange="loadEx(this.value)">
+          <option value="">Choose a dataset…</option>
+          <option value="book">Textbook system (safe)</option>
+          <option value="small">4 processes (safe)</option>
+          <option value="dead">3 processes (unsafe)</option>
+        </select></label>
+      <button class="ghost" onclick="resetAll()">Reset</button>
+      <button class="link" onclick="replay()">Replay tutorial</button>
+    </div>
+    <div id="errs" class="errs" hidden></div>
+  </section>
+
+  <section class="panel" id="inputs">
+    <h2>2. System state</h2>
+    <div class="tables">
+      <div id="tA"></div><div id="tM"></div><div id="tV"></div><div id="tN"></div>
+    </div>
+    <p class="hint">Need = Maximum &minus; Allocation, recalculated as you type.</p>
+  </section>
+
+  <section class="panel" id="sim">
+    <h2>3. Safety algorithm</h2>
+    <div class="row">
+      <button onclick="startSim()">Start simulation</button>
+      <button onclick="step()">Next step</button>
+      <button onclick="auto()" id="autoBtn">Auto play</button>
+      <label>Speed <select id="spd"><option value="1800">Slow</option><option value="1000" selected>Normal</option><option value="450">Fast</option></select></label>
+    </div>
+    <div id="banner" class="banner" hidden></div>
+    <div class="work">Work (available) = <b id="work">&ndash;</b></div>
+    <div id="pool" class="pool"></div>
+    <div id="cards" class="cards"></div>
+    <ol id="log" class="log"></ol>
+  </section>
+
+  <section class="panel" id="req">
+    <h2>4. Resource-request test</h2>
+    <p class="hint">Would granting a request keep the system safe? The request is checked against Need, then Available, then simulated.</p>
+    <div class="row">
+      <label>Process <select id="rp"></select></label>
+      <label>Request vector <input type="text" id="rv" placeholder="e.g. 1, 0, 2"></label>
+      <button onclick="checkReq()">Check request</button>
+      <button class="ghost" id="applyBtn" onclick="applyReq()" hidden>Apply grant</button>
+    </div>
+    <div id="rout" class="banner" hidden></div>
+  </section>
+
+  <section class="panel" id="theory">
+    <h2>About the algorithm</h2>
+    <div class="theory">
+      <div><h3>What it does</h3><p>Proposed by Dijkstra, the Banker's Algorithm grants a resource request only if the system stays in a <em>safe state</em>: one where some order exists that lets every process obtain its maximum claim and finish. Like a bank, it never lends cash it might not be able to recover.</p></div>
+      <div><h3>Data structures</h3><p>For n processes and m resource types: <code>Available[m]</code>, <code>Max[n][m]</code>, <code>Allocation[n][m]</code> and <code>Need[n][m] = Max &minus; Allocation</code>.</p></div>
+      <div><h3>Safety algorithm</h3><p>1. Set Work = Available, Finish[i] = false. 2. Find an unfinished i with Need[i] &le; Work. 3. Work += Allocation[i]; Finish[i] = true; repeat. 4. If every Finish[i] is true the state is safe, and the order found is the safe sequence.</p></div>
+      <div><h3>Resource-request algorithm</h3><p>If Request &gt; Need, it is an error. If Request &gt; Available, the process waits. Otherwise pretend to allocate it and run the safety algorithm; grant only if the result is safe, else roll back.</p></div>
+      <div><h3>Safe vs unsafe</h3><p>Safe means deadlock is impossible. Unsafe does not guarantee deadlock, but it means the OS can no longer promise to avoid it, so avoidance refuses to enter such states.</p></div>
+      <div><h3>OS significance</h3><p>It shows the trade-off of deadlock avoidance: it needs advance knowledge of maximum demands and costs O(m&middot;n&sup2;) per check, but it avoids killing processes or rolling back work. Real systems rarely use it directly, yet it is the standard model for reasoning about resource ordering and safety.</p></div>
+    </div>
+  </section>
+  </div>
+</main>
+<footer>Operating Systems project &middot; Banker's Algorithm Simulator</footer>
+</div>
+<script src="Bankers_Simulator.js"></script>
+</body>
+</html>
