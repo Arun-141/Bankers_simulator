@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simulation of Banker's Algorithm for Deadlock Detection</title>
+<title>Banker's Algorithm Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="Bankers_Simulator.css">
@@ -13,9 +13,9 @@
 <section id="landing">
   <div class="hero">
     <div class="lc">
-      <span class="badge">Operating Systems &middot; Deadlock Avoidance &amp; Detection</span>
+      <span class="badge">Operating Systems &middot; Deadlock Avoidance</span>
       <h1>Banker's Algorithm <em>Simulator</em></h1>
-      <p class="lead">A simulation of the Banker's Algorithm for deadlock avoidance and detection. Learn how the OS checks safety, then find deadlocked processes and watch every step animate.</p>
+      <p class="lead">Learn how an operating system decides whether a resource request is safe, then try it yourself and watch every step animate.</p>
       <div class="row">
         <button class="big" onclick="launch()">Start learning &rarr;</button>
         <button class="link" onclick="launch(true)">Jump to simulator</button>
@@ -29,7 +29,7 @@
 <div id="site" hidden>
 <header>
   <h1>Banker's Algorithm Simulator</h1>
-  <p>Deadlock avoidance and detection &mdash; learn the idea with a short interactive tutorial, then enter a system state and watch the safety algorithm find (or fail to find) a safe sequence.</p>
+  <p>Deadlock avoidance &mdash; learn the idea with a short interactive tutorial, then enter a system state and watch the safety algorithm find (or fail to find) a safe sequence.</p>
   <button class="link" onclick="goHome()">&larr; Back to home</button>
 </header>
 <main>
@@ -56,8 +56,6 @@
           <option value="book">Textbook system (safe)</option>
           <option value="small">4 processes (safe)</option>
           <option value="dead">3 processes (unsafe)</option>
-          <option value="det1">Detection: no deadlock</option>
-          <option value="det2">Detection: deadlock exists</option>
         </select></label>
       <button class="ghost" onclick="resetAll()">Reset</button>
       <button class="link" onclick="replay()">Replay tutorial</button>
@@ -88,21 +86,8 @@
     <ol id="log" class="log"></ol>
   </section>
 
-  <section class="panel" id="det">
-    <h2>4. Deadlock detection</h2>
-    <p class="hint">Enter each process's current outstanding Request. Detection uses Allocation, Available and Request (not Maximum) to find processes that can never finish.</p>
-    <div id="tR"></div>
-    <div class="row" style="margin-top:14px">
-      <button onclick="startDet()">Detect deadlock</button>
-      <button class="ghost" onclick="clearDet()">Clear result</button>
-    </div>
-    <div id="dbanner" class="banner" hidden></div>
-    <div id="dcards" class="cards" style="margin-top:14px"></div>
-    <ol id="dlog" class="log"></ol>
-  </section>
-
   <section class="panel" id="req">
-    <h2>5. Resource-request test</h2>
+    <h2>4. Resource-request test</h2>
     <p class="hint">Would granting a request keep the system safe? The request is checked against Need, then Available, then simulated.</p>
     <div class="row">
       <label>Process <select id="rp"></select></label>
@@ -120,7 +105,6 @@
       <div><h3>Data structures</h3><p>For n processes and m resource types: <code>Available[m]</code>, <code>Max[n][m]</code>, <code>Allocation[n][m]</code> and <code>Need[n][m] = Max &minus; Allocation</code>.</p></div>
       <div><h3>Safety algorithm</h3><p>1. Set Work = Available, Finish[i] = false. 2. Find an unfinished i with Need[i] &le; Work. 3. Work += Allocation[i]; Finish[i] = true; repeat. 4. If every Finish[i] is true the state is safe, and the order found is the safe sequence.</p></div>
       <div><h3>Resource-request algorithm</h3><p>If Request &gt; Need, it is an error. If Request &gt; Available, the process waits. Otherwise pretend to allocate it and run the safety algorithm; grant only if the result is safe, else roll back.</p></div>
-      <div><h3>Deadlock detection</h3><p>Avoidance asks "could this lead to deadlock?" before granting. Detection asks "is the system deadlocked now?" It runs the same Work/Finish idea with the current Request matrix: a process holding nothing is finished, and any process whose Request fits in Work can finish and release its Allocation. Processes that never finish are deadlocked.</p></div>
       <div><h3>Safe vs unsafe</h3><p>Safe means deadlock is impossible. Unsafe does not guarantee deadlock, but it means the OS can no longer promise to avoid it, so avoidance refuses to enter such states.</p></div>
       <div><h3>OS significance</h3><p>It shows the trade-off of deadlock avoidance: it needs advance knowledge of maximum demands and costs O(m&middot;n&sup2;) per check, but it avoids killing processes or rolling back work. Real systems rarely use it directly, yet it is the standard model for reasoning about resource ordering and safety.</p></div>
     </div>

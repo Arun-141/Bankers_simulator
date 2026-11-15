@@ -22,7 +22,7 @@ function gen(){
     return showErr(['Processes must be a whole number from 1 to 10 and resource types from 1 to 6.']);
   }
   n=nn;m=mm;stop();clearSim();
-  grid('tA','Allocation','a',n);grid('tM','Maximum','x',n);grid('tV','Available','v',1);grid('tN','Need','d',n,true);grid('tR','Request (current)','r',n);clearDet();
+  grid('tA','Allocation','a',n);grid('tM','Maximum','x',n);grid('tV','Available','v',1);grid('tN','Need','d',n,true);
   $('rp').innerHTML=[...Array(n)].map((_,i)=>`<option value="${i}">P${i}</option>`).join('');
   $('rv').value='';$('rout').hidden=true;$('applyBtn').hidden=true;
   upd();
@@ -51,7 +51,7 @@ function loadEx(k){
   if(!k)return;const e=EX[k];
   $('n').value=e.A.length;$('m').value=e.V.length;gen();
   e.A.forEach((r,i)=>r.forEach((v,j)=>{$('a'+i+'_'+j).value=v;$('x'+i+'_'+j).value=e.M[i][j]}));
-  e.V.forEach((v,j)=>$('v0_'+j).value=v);if(e.R)e.R.forEach((r,i)=>r.forEach((v,j)=>$('r'+i+'_'+j).value=v));upd();
+  e.V.forEach((v,j)=>$('v0_'+j).value=v);upd();
 }
 function resetAll(){stop();$('ex').value='';$('n').value=5;$('m').value=3;gen();}
 
@@ -250,56 +250,4 @@ function chipGo(k){
   launch(true);
   if(k===3){loadEx('book');$('ex').value='book';startSim()}
   setTimeout(()=>$(k===2?'config':'sim').scrollIntoView({behavior:'smooth'}),80);
-}
-
-/* ===== Deadlock detection (uses Allocation, Available and current Request) ===== */
-const MK=(A,R)=>({A,R,V:[0,0,0],M:A.map((r,i)=>r.map((x,j)=>x+R[i][j]))});
-const DA0=[[0,1,0],[2,0,0],[3,0,3],[2,1,1],[0,0,2]];
-EX.det1=MK(DA0,[[0,0,0],[2,0,2],[0,0,0],[1,0,0],[0,0,2]]);
-EX.det2=MK(DA0,[[0,0,0],[2,0,2],[0,0,1],[1,0,0],[0,0,2]]);
-let dsteps=[],dk=-1,dtm=null;
-function detect(A,R,V){
-  const w=[...V],fin=A.map(r=>r.every(x=>x===0)),out=[{t:'init',work:[...w],free:fin.map((f,i)=>f?i:-1).filter(i=>i>=0)}],order=[];
-  let prog=true;
-  while(prog){prog=false;
-    for(let i=0;i<A.length;i++){if(fin[i])continue;
-      const ok=R[i].every((x,j)=>x<=w[j]);
-      out.push({t:'check',i,ok,req:R[i],work:[...w]});
-      if(ok){A[i].forEach((x,j)=>w[j]+=x);fin[i]=true;order.push(i);prog=true;out.push({t:'finish',i,rel:A[i],work:[...w]})}}}
-  const dead=fin.map((f,i)=>f?-1:i).filter(i=>i>=0);
-  out.push(dead.length?{t:'dead',dead}:{t:'ok',order});
-  return out;
-}
-function dbanner(c,h){const b=$('dbanner');b.className='banner '+c;b.innerHTML=h;b.hidden=false}
-function clearDet(){clearInterval(dtm);dsteps=[];dk=-1;if(!$('dcards'))return;$('dcards').innerHTML='';$('dlog').innerHTML='';$('dbanner').hidden=true}
-function startDet(){
-  if(!n)gen();
-  const r=upd();if(!r)return;
-  if(r.err.length)return dbanner('bad','Fix the errors in the Allocation, Maximum and Available tables first (see the top of the page).');
-  const R=[],bad=[];
-  for(let i=0;i<n;i++){R.push([]);for(let j=0;j<m;j++){
-    const e=$('r'+i+'_'+j),s=e.value.trim(),v=Number(s);e.classList.remove('bad');
-    if(s===''||!Number.isInteger(v)||v<0){e.classList.add('bad');bad.push(`Request P${i} ${L(j)}: enter a whole number, 0 or greater.`);R[i].push(0)}else R[i].push(v)}}
-  if(bad.length)return dbanner('bad',bad.slice(0,6).join('<br>'));
-  clearDet();
-  dsteps=detect(r.A,R,r.V);
-  $('dcards').innerHTML=r.A.map((a,i)=>`<div class="card" id="dpc${i}"><b>P${i}</b><small>Alloc ${F(a)}</small><small>Request ${F(R[i])}</small><div class="st">Pending</div></div>`).join('');
-  dtm=setInterval(dstep,Math.min(+$('spd').value,1000));dstep();
-}
-function dstep(){
-  if(++dk>=dsteps.length)return clearInterval(dtm);
-  const s=dsteps[dk];let done=new Set(dsteps[0].free),dead=new Set();
-  for(let q=0;q<=dk;q++){const t=dsteps[q];if(t.t==='finish')done.add(t.i);if(t.t==='dead')t.dead.forEach(i=>dead.add(i))}
-  document.querySelectorAll('#dcards .card').forEach((c,i)=>{
-    const cur=s.i===i,d=done.has(i),x=dead.has(i);
-    c.className='card'+(d?' done':'')+(x?' dead':'')+(cur&&s.t==='check'?(s.ok?' run':' wait'):'')+(cur&&s.t==='finish'?' flash':'');
-    c.querySelector('.st').textContent=x?'Deadlocked ✘':d?(dsteps[0].free.includes(i)?'Holds nothing ✔':'Finished ✔'):cur&&s.t==='check'?(s.ok?'Can proceed…':'Blocked ✘'):'Pending';
-  });
-  let msg,cls;
-  if(s.t==='init'){msg=`Work = Available = ${F(s.work)}.`+(s.free.length?` ${s.free.map(i=>'P'+i).join(', ')} hold no resources, so they cannot be deadlocked.`:'');cls='y'}
-  else if(s.t==='check'){msg=s.ok?`P${s.i}: Request ${F(s.req)} ≤ Work ${F(s.work)} → can be satisfied.`:`P${s.i}: Request ${F(s.req)} exceeds Work ${F(s.work)} → blocked for now.`;cls=s.ok?'y':'n'}
-  else if(s.t==='finish'){msg=`P${s.i} finishes and releases ${F(s.rel)}. Work = ${F(s.work)}.`;cls='f'}
-  else if(s.t==='ok'){msg='No deadlock: every process can finish.';cls='f';dbanner('ok','✔ NO DEADLOCK — every process can finish. Order: &lt; '+s.order.map(i=>'P'+i).join(', ')+' &gt;')}
-  else{msg=`DEADLOCK: ${s.dead.map(i=>'P'+i).join(', ')} can never get their requested resources.`;cls='x';dbanner('bad','✘ DEADLOCK DETECTED — '+s.dead.map(i=>'P'+i).join(', ')+' are deadlocked: each waits for resources that only another blocked process can release.')}
-  const li=document.createElement('li');li.className=cls;li.textContent=msg;$('dlog').appendChild(li);li.scrollIntoView({block:'nearest'});
 }
